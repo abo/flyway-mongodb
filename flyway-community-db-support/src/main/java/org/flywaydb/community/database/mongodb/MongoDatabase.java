@@ -102,4 +102,26 @@ public class MongoDatabase extends Database<MongoConnection> {
     public String getSelectStatement(Table table) {
         return "db." + table.getName() + ".find({type:{$ne:\"TABLE\"}, installed_rank:{$gt: ? }}).sort({installed_rank:1})";
     }
+
+    @Override
+    public String getUpdateStatement(Table table, int installedRank) {
+        return "db." + table.getName() + ".updateOne({installed_rank: " + installedRank + "}, {$set:{description: ?, type: ?, checksum: ? }});";
+//        return "UPDATE " + table.getName()
+//                + " SET "
+//                + quote("description") + "=? , "
+//                + quote("type") + "=? , "
+//                + quote("checksum") + "=?"
+//                + " WHERE " + quote("installed_rank") + "=?";
+//        return super.getUpdateStatement(table);
+    }
+
+    @Override
+    public String getDeleteStatementForRepeatable(Table table) {
+        return "db." + table.getName() + ".deleteOne({success: false, description: ?})";
+    }
+
+    @Override
+    public String getDeleteStatementForVersioned(Table table) {
+        return "db." + table.getName() + ".deleteOne({success: false, version: ?})";
+    }
 }

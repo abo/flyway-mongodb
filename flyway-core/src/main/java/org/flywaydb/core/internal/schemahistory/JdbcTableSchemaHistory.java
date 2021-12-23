@@ -258,11 +258,11 @@ class JdbcTableSchemaHistory extends SchemaHistory {
                     .forEach(am -> repairResult.migrationsRemoved.add(CommandResultFactory.createRepairOutput(am)));
 
             for (AppliedMigration appliedMigration : appliedMigrations) {
-                jdbcTemplate.execute("DELETE FROM " + table +
-                                             " WHERE " + database.quote("success") + " = " + database.getBooleanFalse() + " AND " +
-                                             (appliedMigration.getVersion() != null ?
-                                                     database.quote("version") + " = '" + appliedMigration.getVersion().getVersion() + "'" :
-                                                     database.quote("description") + " = '" + appliedMigration.getDescription() + "'"));
+                if (appliedMigration.getVersion() != null) {
+                    jdbcTemplate.execute(database.getDeleteStatementForVersioned(table), appliedMigration.getVersion().getVersion());
+                } else {
+                    jdbcTemplate.execute(database.getDeleteStatementForRepeatable(table), appliedMigration.getDescription());
+                }
             }
 
             clearCache();
@@ -315,13 +315,8 @@ class JdbcTableSchemaHistory extends SchemaHistory {
         Object checksumObj = checksum == null ? JdbcNullTypes.IntegerNull : checksum;
 
         try {
-            jdbcTemplate.update("UPDATE " + table
-                                        + " SET "
-                                        + database.quote("description") + "=? , "
-                                        + database.quote("type") + "=? , "
-                                        + database.quote("checksum") + "=?"
-                                        + " WHERE " + database.quote("installed_rank") + "=?",
-                                description, type.name(), checksumObj, appliedMigration.getInstalledRank());
+            jdbcTemplate.update(database.getUpdateStatement(table, appliedMigration.getInstalledRank()),
+                                description, type.name(), checksumObj);
         } catch (SQLException e) {
             throw new FlywaySqlException("Unable to repair Schema History table " + table
                                                  + " for version " + version, e);

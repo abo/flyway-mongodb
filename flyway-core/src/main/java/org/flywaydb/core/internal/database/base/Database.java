@@ -372,6 +372,28 @@ public abstract class Database<C extends Connection> implements Closeable {
                 + " ORDER BY " + quote("installed_rank");
     }
 
+    public String getDeleteStatementForVersioned(Table table) {
+        return "DELETE FROM " + table +
+                " WHERE " + quote("success") + " = " + getBooleanFalse() + " AND " +
+                        quote("version") + " = ?";
+    }
+
+    public String getDeleteStatementForRepeatable(Table table) {
+        return "DELETE FROM " + table +
+                " WHERE " + quote("success") + " = " + getBooleanFalse() + " AND " +
+                        quote("description") + " = ?";
+    }
+
+    public String getUpdateStatement(Table table, int installedRank) {
+        return "UPDATE " + table
+                + " SET "
+                + quote("description") + "=? , "
+                + quote("type") + "=? , "
+                + quote("checksum") + "=?"
+                + " WHERE " + quote("installed_rank") + "=" + installedRank;
+//                description, type.name(), checksumObj, appliedMigration.getInstalledRank()
+    }
+
     public final String getInstalledBy() {
         if (installedBy == null) {
             installedBy = configuration.getInstalledBy() == null ? getCurrentUser() : configuration.getInstalledBy();
